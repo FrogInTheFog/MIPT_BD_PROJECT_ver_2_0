@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>510</width>
+    <height>410</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Выбор Таблицы</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QPushButton" name="streams_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>100</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>streams</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="greating_label">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>20</y>
+      <width>141</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Добро пожаловать!</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>60</y>
+      <width>241</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Пожалуйста, выберите таблицу</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="students_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>140</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>students</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="exams_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>180</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>exams</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="sessions_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>220</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>sessions</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="departments_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>260</y>
+      <width>111</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>departments</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
