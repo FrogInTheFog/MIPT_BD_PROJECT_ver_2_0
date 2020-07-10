@@ -38,7 +38,7 @@ class LoginDatabase():
         # print(result)
         return result
 
-    def update_date(self, new_data):  # обнавляет таблицу
+    def update_date(self, new_data):  # обновляет таблицу
         cur_data = self.select_all_query()
         columns_name = self.tables_names()
         # print(columns_name)
@@ -54,20 +54,28 @@ class LoginDatabase():
             for row_in_cur in cur_data:
                 if str(row_in_new[0]) == str(row_in_cur[0]):  # если нашлась в текуще бд запись с таким же id
                     count_in += 1  # нашли совпадение - увеличили счетчик
-                    count = 0  # счетчик изменений в строке
+                    count = 0  # счетчик изменений в строк
                     for iterator in range(1, len(list_result_headers) - 1):  # пробегаемся по всем колонам, кроме первой
                         if row_in_new[iterator] != str(row_in_cur[iterator]):  # если есть несовпадение
                             count += 1  # увеличиваем счетчик изменений
                             # формируем UPDATE запрос
-                            query = "UPDATE " + table_name + " SET " + str(list_result_headers[iterator]) + " = "
+                            header = str(list_result_headers[iterator])
+                            # query = "UPDATE :table_name SET :header = :data"
+                            query = "UPDATE sessions SET " + header + " = ? WHERE " + table_name[0:-1] + "_id = " + \
+                                    str(row_in_new[0]) + ";"
+                            data = ""
                             if type(row_in_cur[iterator]) == 'int':  # если инт
-                                query += str(row_in_new[iterator])  # ковычки не нужны
+                                data = str(row_in_new[iterator])
+                                # query += str(row_in_new[iterator])  # ковычки не нужны
                             else:
-                                query += '"' + str(row_in_new[iterator]) + '"'  # иначе - ставим
-                            query += " WHERE " + table_name[0:-1] + "_id = " + str(row_in_new[0]) + ";"
+                                data = '"' + str(row_in_new[iterator]) + '"'
+                                # query += '"' + str(row_in_new[iterator]) + '"'  # иначе - ставим
+                            # query += data + " WHERE " + table_name[0:-1] + "_id = :id;"
+                            # query += " WHERE session_id = :id;"
+                            # query += "WHERE " + table_name[0:-1] + "_id = " + str(row_in_new[0]) + ";
                             # print(query)
                             try:
-                                print(query)
+                                print(query, data)
                                 self.conn.execute(query)
                                 self.conn.commit()
                                 error = None
@@ -75,7 +83,7 @@ class LoginDatabase():
                                 error = str(exc)
                             # self.conn.close()
                             if error is not None:
-                                if error == "UNIQUE constraint failed: students.student_id":
+                                if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                                     print("insert_" + error)
                                 else:
                                     self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
@@ -91,22 +99,21 @@ class LoginDatabase():
                         continue  # переходим к следущей строке new_data
             if count_in == 0:  # если совпадений нет, то данную строку надо добавить в бд
                 query = "INSERT INTO " + table_name + " VALUES("
+                data = []
                 for item in row_in_new:
-                    if type(item) == "int":
-                        query += item + ", "
-                    else:
-                        query += "'" + item + "', "
-                query = query[0:-2]
+                    data.append(item)
+                    query += "?,"
+                query = query[0:-1]
                 query += ")"
                 try:
                     print(query)
-                    cursor = self.conn.execute(query)
+                    cursor = self.conn.execute(query, data)
                     self.conn.commit()
                     error = None
                 except Exception as exc:
                     error = str(exc)
                 if error is not None:
-                    if error == "UNIQUE constraint failed: students.student_id":
+                    if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
                         self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
@@ -123,16 +130,18 @@ class LoginDatabase():
                     count_out += 1  # увеличиваем счетчик
             if count_out == 0:  # если счетчик не увеличился, значит совпадений нет
                 # Формируем запрос на удаление
-                query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = " + str(row_in_cur[0]) + ";"
+                data_id = str(row_in_cur[0])
+                query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = ?;"
                 try:
                     print(query)
-                    self.conn.execute(query)
+                    # self.conn.execute(query)
+                    self.conn.execute(query, data_id)
                     self.conn.commit()
                     error = None
                 except Exception as exc:
                     error = str(exc)
                 if error is not None:
-                    if error == "UNIQUE constraint failed: students.student_id":
+                    if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
                         self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
@@ -276,7 +285,7 @@ class SessionsWindow(QMainWindow):
         new_count = SessionsWindow.additional_strings_count - empty_count
         SessionsWindow.additional_strings_count = new_count
 
-        self.bdWindow = StreamsWindow()
+        self.bdWindow = SessionsWindow()
         self.bdWindow.show()
         self.close()
 

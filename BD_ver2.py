@@ -40,8 +40,14 @@ class LoginWindow(Login_Form):
         # Пытаемся выполнить запрос
         cur = self.conn.cursor()
         try:  # две ветки
-            query = ('SELECT * FROM data WHERE login = "' + login + '"').strip()
-            cur.execute(query)
+            # data = [('data', login)]
+            # query = 'SELECT * FROM ? WHERE login = ?'
+            query = 'SELECT * FROM data WHERE login = :login'
+            # query = 'SELECT * FROM data WHERE login = ?'
+            # query = ('SELECT * FROM data WHERE login = "' + login + '"').strip()
+            cur.execute(query, {"login": login})
+            # cur.execute(query, {"d": "data"})
+            # cur.execute(query, [{"d": 'data'}, {"login": login}])
             self.conn.commit()  # сохраняем резальтат в базе
             result = cur.fetchone()
             if result == "" or result[1] != password:
