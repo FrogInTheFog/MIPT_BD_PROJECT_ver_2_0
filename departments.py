@@ -14,41 +14,34 @@ class LoginDatabase():
         query = "SELECT * FROM " + table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.description
-        # print(result)
         return result
 
     def select_all_query(self):  # выводит всю бд
         query = "SELECT * FROM " + table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchall()
-        # print(result)
         return result
 
     def count_strings(self):  # выводит количество записей // строк
         query = "SELECT COUNT(*) FROM " + table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchone()
-        # print(result[0])
         return result[0]
 
     def show_date(self):  # выводит всю таблицу
         query = "SELECT * FROM " + table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchall()
-        # print(result)
         return result
 
     def update_date(self, new_data):  # обновляет таблицу
         cur_data = self.select_all_query()
         columns_name = self.tables_names()
-        # print(columns_name)
         # Получаем список колон
         result_headers = ""
         for column_description in columns_name:
             result_headers += column_description[0] + " "
         list_result_headers = result_headers[0:(len(result_headers) - 1)].split(" ")
-        # print(list_result_headers)
-        # print(new_data)
         for row_in_new in new_data:
             count_in = 0  # счетчик совпадений в текущей бд
             for row_in_cur in cur_data:
@@ -60,28 +53,20 @@ class LoginDatabase():
                             count += 1  # увеличиваем счетчик изменений
                             # формируем UPDATE запрос
                             header = str(list_result_headers[iterator])
-                            # query = "UPDATE :table_name SET :header = :data"
                             query = "UPDATE sessions SET " + header + " = ? WHERE " + table_name[0:-1] + "_id = " + \
                                     str(row_in_new[0]) + ";"
                             data = ""
                             if type(row_in_cur[iterator]) == 'int':  # если инт
-                                data = str(row_in_new[iterator])
-                                # query += str(row_in_new[iterator])  # ковычки не нужны
+                                data = str(row_in_new[iterator]) # ковычки не нужны
                             else:
                                 data = '"' + str(row_in_new[iterator]) + '"'
-                                # query += '"' + str(row_in_new[iterator]) + '"'  # иначе - ставим
-                            # query += data + " WHERE " + table_name[0:-1] + "_id = :id;"
-                            # query += " WHERE session_id = :id;"
-                            # query += "WHERE " + table_name[0:-1] + "_id = " + str(row_in_new[0]) + ";
-                            # print(query)
                             try:
                                 print(query, data)
-                                self.conn.execute(query)
+                                self.conn.execute(query, data)
                                 self.conn.commit()
                                 error = None
                             except Exception as exc:
                                 error = str(exc)
-                            # self.conn.close()
                             if error is not None:
                                 if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                                     print("insert_" + error)
@@ -106,7 +91,7 @@ class LoginDatabase():
                 query = query[0:-1]
                 query += ")"
                 try:
-                    print(query)
+                    print(query, data)
                     cursor = self.conn.execute(query, data)
                     self.conn.commit()
                     error = None
@@ -133,8 +118,7 @@ class LoginDatabase():
                 data_id = str(row_in_cur[0])
                 query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = ?;"
                 try:
-                    print(query)
-                    # self.conn.execute(query)
+                    print("DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = ", data_id)
                     self.conn.execute(query, data_id)
                     self.conn.commit()
                     error = None
@@ -216,14 +200,9 @@ class DepartmentsWindow(QMainWindow):
 
         # попробовать закинуть в отдельный метод
         select_result = self.loginDatabase.show_date()
-        # print(select_result)
-        # print(StreamsWindow.additional_strings_count)
         # заполняем строки
         for counter, value in enumerate(select_result):
-            # print("value = " + str(value))
-            # print("counter = " + str(counter))
             for j in range(len(value) + DepartmentsWindow.additional_strings_count):
-                # print("j = " + str(j))
                 if j >= len(value):
                     data = ""
                 else:
@@ -234,7 +213,6 @@ class DepartmentsWindow(QMainWindow):
 
         # тут идет костыль (надо бы нормально найти причину опустошения последнего столбца, но сроки горят)
         for counter, value in enumerate(select_result):
-            # print(value[table.columnCount() - 1])
             table.setItem(counter, self.table.columnCount() - 1, QTableWidgetItem(str(value[self.table.columnCount() - 1])))
 
     def add_string(self):
@@ -255,12 +233,10 @@ class DepartmentsWindow(QMainWindow):
                     return
                 else:
                     result_text += self.table.item(i, j).text() + "_"
-                # print(self.table.item(i, j).text())
             result_list_j = list(result_text[0:(len(result_text) - 1)].split("_"))
             result_list.append(result_list_j)
 
         self.additional_strings_count = 0
-        # print(result_list)
         self.loginDatabase.update_date(result_list)
         self.bdWindow = DepartmentsWindow()
         self.bdWindow.show()
@@ -271,11 +247,9 @@ class DepartmentsWindow(QMainWindow):
         empty_count = 0
         for i in range(self.table.rowCount()):
             empty_blocks_count = 0
-            # print(self.table.rowCount())
             for j in range(self.table.columnCount()):
                 if self.table.item(i, j) == None or self.table.item(i, j).text() == "":
                     empty_blocks_count += 1
-                    # print("ОШИБКА! Одно из полей не заполнено")
                 else:
                     list_of_last_column.append(self.table.item(i, j).text())
             if empty_blocks_count == self.table.columnCount():
