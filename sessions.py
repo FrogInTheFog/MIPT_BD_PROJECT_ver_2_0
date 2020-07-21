@@ -1,9 +1,9 @@
 import sqlite3 as db
+import sqlite3 as db
 from PyQt5.Qt import *
 
 DB_PATH = "fin_bd.s3db"
 table_name = "sessions"
-
 
 class LoginDatabase():
     def __init__(self, dbname):
@@ -59,6 +59,7 @@ class LoginDatabase():
                             try:
                                 data = int(row_in_new[iterator])
                             except Exception as exc:
+                               # print(exc)
                                 data = str(row_in_new[iterator])
                             try:
                                 print(query, data)
@@ -71,7 +72,7 @@ class LoginDatabase():
                                 if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                                     print("insert_" + error)
                                 else:
-                                    self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
+                                    self.showMessageBox("Внимание!", "Произошла ошибка при обновлении: " + error)
                             else:
                                 print("Изменение успешно сохранено")
                     if count != 0:  # если в строке есть изменение, то извещаем пользователя
@@ -101,7 +102,7 @@ class LoginDatabase():
                     if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
-                        self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
+                        self.showMessageBox("Внимание!", "Произошла ошибка при добавлении: " + error)
                 else:
                     self.showMessageBox("Обновление", "Строка c полем '" +
                                         table_name[0:-1] + "_id', которое равно " +
@@ -116,10 +117,10 @@ class LoginDatabase():
             if count_out == 0:  # если счетчик не увеличился, значит совпадений нет
                 # Формируем запрос на удаление
                 data_id = str(row_in_cur[0])
-                query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = ?;"
+                query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = :data_id;"
                 try:
-                    print("DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = ", data_id)
-                    self.conn.execute(query, data_id)
+                    print("DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = " + data_id)
+                    self.conn.execute(query, {"data_id": data_id})
                     self.conn.commit()
                     error = None
                 except Exception as exc:
@@ -128,13 +129,21 @@ class LoginDatabase():
                     if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
-                        self.showMessageBox("Внимание!", "Произошла ошибка: " + error)
+                        self.showMessageBox("Внимание!", "Произошла ошибка при удалении: " + error)
                 else:
                     self.showMessageBox("Удаление", "Строка c полем '" +
                                         table_name[0:-1] + "_id', которое равно " +
                                         str(row_in_cur[0]) + " успешно удалена из базы данных")
 
     def showMessageBox(self, title, message):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
+
+    def dilemaMessage(self, title, message):
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Warning)
         msg_box.setWindowTitle(title)
@@ -173,14 +182,14 @@ class SessionsWindow(QMainWindow):
         update_button = QPushButton("Обновить базу данных", self)
         update_button.clicked.connect(self.update_data)
 
-        delete_empty_button = QPushButton("Удалить пустые строки (Необходимое действие перед обновлением базы"
-                                          " данных)", self)
-        delete_empty_button.clicked.connect(self.delete_empty)
+        # delete_empty_button = QPushButton("Удалить пустые строки (Необходимое действие перед обновлением базы"
+                               #           " данных)", self)
+        # delete_empty_button.clicked.connect(self.delete_empty)
 
         grid_layout.addWidget(self.table, 0, 0)  # Добавляем таблицу в сетку
         grid_layout.addWidget(add_button, 1, 0)  # Добавляем кнопку в сетку
         grid_layout.addWidget(update_button, 2, 0)
-        grid_layout.addWidget(delete_empty_button, 3, 0)
+        # grid_layout.addWidget(delete_empty_button, 3, 0)
 
     def print_table(self, table):
         count_str = self.loginDatabase.count_strings() + self.additional_strings_count
@@ -199,9 +208,14 @@ class SessionsWindow(QMainWindow):
 
         # попробовать закинуть в отдельный метод
         select_result = self.loginDatabase.show_date()
+        # print(select_result)
+        # print(StreamsWindow.additional_strings_count)
         # заполняем строки
         for counter, value in enumerate(select_result):
+            # print("value = " + str(value))
+            # print("counter = " + str(counter))
             for j in range(len(value) + self.additional_strings_count):
+                # print("j = " + str(j))
                 if j >= len(value):
                     data = ""
                 else:
@@ -212,13 +226,18 @@ class SessionsWindow(QMainWindow):
         #TODO
         # тут идет костыль (надо бы нормально найти причину опустошения последнего столбца, но сроки горят)
         for counter, value in enumerate(select_result):
+            # print(value[table.columnCount() - 1])
             table.setItem(counter, self.table.columnCount() - 1, QTableWidgetItem(str(value[self.table.columnCount() - 1])))
 
     def add_string(self):
         new_count = self.additional_strings_count + 1
-        self.bdWindow = SessionsWindow(new_count)
-        self.bdWindow.show()
-        self.close()
+        if self.update_data() == 1:
+            # self.print_line()
+            return
+        else:
+            self.bdWindow = SessionsWindow(new_count)
+            self.bdWindow.show()
+            self.close()
 
     def update_data(self):  # обновление базы данных
         result_list = list("")
@@ -233,21 +252,18 @@ class SessionsWindow(QMainWindow):
                     empty = empty + 1
                 else:
                     result_text += self.table.item(i, j).text() + "_"
-            if empty == self.table.columnCount():
-                self.delete_empty()
-            elif empty == 0:
+            if empty == self.table.columnCount(): # если вся строка пустая
+                print("Пустая строка - " + str(i+1) + " строка")
+            elif empty == 0:  # если вся строка фулл
                 pass
-            else:
-                self.showMessageBox("ОШИБКА", "Пустое поле в " + str(first_empty) + " столбце " +
-                    str(i+1) + " строки")
-                return
-
+            else:  # если в строке есть пустое поле
+                self.showMessageBox("ОШИБКА", "Пустое поле в " + str(first_empty) + " столбце " + str(i+1) + " строки")
+                return 1
             if result_text == '':
                 pass
             else:
                 result_list_j = list(result_text[0:(len(result_text) - 1)].split("_"))
                 result_list.append(result_list_j)
-
         self.additional_strings_count = 0
         print(result_list)
         self.loginDatabase.update_date(result_list)
@@ -255,7 +271,7 @@ class SessionsWindow(QMainWindow):
         self.bdWindow.show()
         self.close()
 
-    def delete_empty(self):
+    """def delete_empty(self):
         list_of_last_column = []
         empty_count = 0
         for i in range(self.table.rowCount()):
@@ -270,10 +286,11 @@ class SessionsWindow(QMainWindow):
                 print("Пустая строка - " + str(i+1) + " строка")
         print("Всего пустых строк " + str(empty_count))
         new_count = self.additional_strings_count - empty_count
+        # SessionsWindow.additional_strings_count = new_count
 
         self.bdWindow = SessionsWindow(new_count)
         self.bdWindow.show()
-        self.close()
+        self.close()"""
 
     def showMessageBox(self, title, message):
         msg_box = QMessageBox()
