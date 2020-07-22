@@ -63,14 +63,13 @@ class LoginDatabase():
                         else:
                             print("Обновление приостановлено")
                             continue
-                    for iterator in range(1, len(list_result_headers) - 1):  # пробегаемся по всем колонам, кроме первой
+                    for iterator in range(1, len(list_result_headers)):  # пробегаемся по всем колонам, кроме первой
                         if row_in_new[iterator] != str(row_in_cur[iterator]):  # если есть несовпадение
                             count += 1  # увеличиваем счетчик изменений
                             # формируем UPDATE запрос
                             header = str(list_result_headers[iterator])
                             query = "UPDATE sessions SET " + header + " = ? WHERE " + table_name[0:-1] + "_id = " + \
                                     str(row_in_new[0]) + ";"
-                            # data = ""
                             try:
                                 data = int(row_in_new[iterator])
                             except Exception as exc:
@@ -113,7 +112,7 @@ class LoginDatabase():
                 query += ")"
                 try:
                     print(query, data)
-                    cursor = self.conn.execute(query, data)
+                    self.conn.execute(query, data)
                     self.conn.commit()
                     error = None
                 except Exception as exc:
@@ -186,7 +185,7 @@ class LoginDatabase():
 class SessionsWindow(QMainWindow):
     # Переопределяем конструктор класса
     def __init__(self, additional_strings_count):
-        self.additional_strings_count = additional_strings_count # количество строк добавленное во время одной сессии
+        self.additional_strings_count = additional_strings_count  # количество строк добавленное во время одной сессии
         # Обязательно нужно вызвать метод супер класса
         QMainWindow.__init__(self)
 
@@ -209,14 +208,9 @@ class SessionsWindow(QMainWindow):
         update_button = QPushButton("Обновить базу данных", self)
         update_button.clicked.connect(self.update_data)
 
-        # delete_empty_button = QPushButton("Удалить пустые строки (Необходимое действие перед обновлением базы"
-                               #           " данных)", self)
-        # delete_empty_button.clicked.connect(self.delete_empty)
-
         grid_layout.addWidget(self.table, 0, 0)  # Добавляем таблицу в сетку
         grid_layout.addWidget(add_button, 1, 0)  # Добавляем кнопку в сетку
         grid_layout.addWidget(update_button, 2, 0)
-        # grid_layout.addWidget(delete_empty_button, 3, 0)
 
     def print_table(self, table):
         count_str = self.loginDatabase.count_strings() + self.additional_strings_count
@@ -235,8 +229,7 @@ class SessionsWindow(QMainWindow):
 
         # попробовать закинуть в отдельный метод
         select_result = self.loginDatabase.show_date()
-        # print(select_result)
-        # print(StreamsWindow.additional_strings_count)
+
         # заполняем строки
         for counter, value in enumerate(select_result):
             # print("value = " + str(value))
@@ -248,13 +241,6 @@ class SessionsWindow(QMainWindow):
                 else:
                     data = str(value[j])
                 table.setItem(counter, j, QTableWidgetItem(data))
-
-        # нужен костыль, который отрисовывает последнюю строку, или норм решение
-        #TODO
-        # тут идет костыль (надо бы нормально найти причину опустошения последнего столбца, но сроки горят)
-        for counter, value in enumerate(select_result):
-            # print(value[table.columnCount() - 1])
-            table.setItem(counter, self.table.columnCount() - 1, QTableWidgetItem(str(value[self.table.columnCount() - 1])))
 
     def add_string(self):
         new_count = self.additional_strings_count + 1
@@ -297,27 +283,6 @@ class SessionsWindow(QMainWindow):
         self.bdWindow = SessionsWindow(0)
         self.bdWindow.show()
         self.close()
-
-    """def delete_empty(self):
-        list_of_last_column = []
-        empty_count = 0
-        for i in range(self.table.rowCount()):
-            empty_blocks_count = 0
-            for j in range(self.table.columnCount()):
-                if self.table.item(i, j) == None or self.table.item(i, j).text() == "":
-                    empty_blocks_count += 1
-                else:
-                    list_of_last_column.append(self.table.item(i, j).text())
-            if empty_blocks_count == self.table.columnCount():
-                empty_count += 1
-                print("Пустая строка - " + str(i+1) + " строка")
-        print("Всего пустых строк " + str(empty_count))
-        new_count = self.additional_strings_count - empty_count
-        # SessionsWindow.additional_strings_count = new_count
-
-        self.bdWindow = SessionsWindow(new_count)
-        self.bdWindow.show()
-        self.close()"""
 
     def showMessageBox(self, title, message):
         msg_box = QMessageBox()
