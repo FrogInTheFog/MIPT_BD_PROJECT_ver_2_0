@@ -1,5 +1,4 @@
 import sqlite3 as db
-import sqlite3 as db
 from PyQt5.Qt import *
 
 DB_PATH = "fin_bd.s3db"
@@ -42,12 +41,28 @@ class LoginDatabase():
         for column_description in columns_name:
             result_headers += column_description[0] + " "
         list_result_headers = result_headers[0:(len(result_headers) - 1)].split(" ")
+        map_of_checked = dict()
+        line_counter = 0
+
         for row_in_new in new_data:
+            line_counter += 1
             count_in = 0  # счетчик совпадений в текущей бд
             for row_in_cur in cur_data:
                 if str(row_in_new[0]) == str(row_in_cur[0]):  # если нашлась в текуще бд запись с таким же id
                     count_in += 1  # нашли совпадение - увеличили счетчик
                     count = 0  # счетчик изменений в строк
+                    if row_in_new[0] in map_of_checked:
+                        if self.showDilemaBox("Совпадение", "Запись с id = " + str(row_in_new[0]) +
+                                                            " уже была обработана в строке номер "
+                                                            + str(map_of_checked[row_in_new[0]]) +
+                                                            " в ходе обновления\n"
+                                                            "Вы хотите обновить запись еще раз?\n"
+                                                            "Если нет -  данные в строке " + str(line_counter) +
+                                                            " не сохраняться") == 1:
+                            print("Запись будет обновлена")
+                        else:
+                            print("Обновление приостановлено")
+                            continue
                     for iterator in range(1, len(list_result_headers) - 1):  # пробегаемся по всем колонам, кроме первой
                         if row_in_new[iterator] != str(row_in_cur[iterator]):  # если есть несовпадение
                             count += 1  # увеличиваем счетчик изменений
@@ -55,11 +70,11 @@ class LoginDatabase():
                             header = str(list_result_headers[iterator])
                             query = "UPDATE sessions SET " + header + " = ? WHERE " + table_name[0:-1] + "_id = " + \
                                     str(row_in_new[0]) + ";"
-                            data = ""
+                            # data = ""
                             try:
                                 data = int(row_in_new[iterator])
                             except Exception as exc:
-                               # print(exc)
+                                # print(exc)
                                 data = str(row_in_new[iterator])
                             try:
                                 print(query, data)
@@ -72,17 +87,22 @@ class LoginDatabase():
                                 if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                                     print("insert_" + error)
                                 else:
-                                    self.showMessageBox("Внимание!", "Произошла ошибка при обновлении: " + error)
+                                    self.showMessageBox("Внимание!", "Произошла ошибка при обновлении: " + error,
+                                                        'error')
                             else:
                                 print("Изменение успешно сохранено")
+
                     if count != 0:  # если в строке есть изменение, то извещаем пользователя
                         self.showMessageBox("Обновление", "Изменения строки c полем '" +
                                             table_name[0:-1] + "_id', которое равно " +
-                                            row_in_new[0] + " успешно внесены в базу данных")
+                                            row_in_new[0] + " успешно внесены в базу данных", 'info')
+                        map_of_checked[row_in_new[0]] = line_counter
                     elif count == 0:  # если изменений нет, то ничего не делаем
+                        map_of_checked[row_in_new[0]] = line_counter
                         print("Внимание! Запись с полем '" + table_name[0:-1] + "_id', которое равно "
                               + row_in_new[0] + " уже существует и не нуждается в обновлении")
                         continue  # переходим к следущей строке new_data
+
             if count_in == 0:  # если совпадений нет, то данную строку надо добавить в бд
                 query = "INSERT INTO " + table_name + " VALUES("
                 data = []
@@ -102,11 +122,12 @@ class LoginDatabase():
                     if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
-                        self.showMessageBox("Внимание!", "Произошла ошибка при добавлении: " + error)
+                        self.showMessageBox("Внимание!", "Произошла ошибка при добавлении: " + error, 'error')
                 else:
+                    map_of_checked[row_in_new[0]] = line_counter
                     self.showMessageBox("Обновление", "Строка c полем '" +
                                         table_name[0:-1] + "_id', которое равно " +
-                                        row_in_new[0] + " успешно добавлена в базу данных")
+                                        row_in_new[0] + " успешно добавлена в базу данных", 'info')
 
         # теперь проверяем на удаление строк
         for row_in_cur in cur_data:  # сравниваем строку в текущей бд
@@ -129,27 +150,33 @@ class LoginDatabase():
                     if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
-                        self.showMessageBox("Внимание!", "Произошла ошибка при удалении: " + error)
+                        self.showMessageBox("Внимание!", "Произошла ошибка при удалении: " + error, 'error')
                 else:
                     self.showMessageBox("Удаление", "Строка c полем '" +
                                         table_name[0:-1] + "_id', которое равно " +
-                                        str(row_in_cur[0]) + " успешно удалена из базы данных")
+                                        str(row_in_cur[0]) + " успешно удалена из базы данных", 'info')
 
-    def showMessageBox(self, title, message):
+    def showMessageBox(self, title, message, case):
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
+        if case == "error":
+            msg_box.setIcon(QMessageBox.Warning)
+        elif case == 'info':
+            msg_box.setIcon(QMessageBox.Information)
         msg_box.setWindowTitle(title)
         msg_box.setText(message)
         msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec_()
 
-    def dilemaMessage(self, title, message):
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec_()
+    def showDilemaBox(self, title, message):
+        dilema_box = QMessageBox()
+        dilema_box.setIcon(QMessageBox.Question)
+        dilema_box.setWindowTitle(title)
+        dilema_box.setText(message)
+        dilema_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        if dilema_box.exec() == QMessageBox.Yes:
+            return 1
+        else:
+            return 0
 
     def __del__(self):
         self.conn.close()
@@ -239,7 +266,7 @@ class SessionsWindow(QMainWindow):
             self.bdWindow.show()
             self.close()
 
-    def update_data(self):  # обновление базы данных
+    def update_data(self):  # обновление базы данных. Проверка на пустоту и запрос на обновление
         result_list = list("")
         for i in range(self.table.rowCount()):
             result_text = ""
