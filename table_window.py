@@ -1,36 +1,54 @@
 import sqlite3 as db
 from PyQt5.Qt import *
 
+
 DB_PATH = "fin_bd.s3db"
-table_name = "sessions"
+
+# Далее код для welcome.py
+conn = db.connect(DB_PATH)
+cursor = conn.execute("SELECT * FROM sqlite_master where type = 'table'")
+result = cursor.fetchall()
+conn.close()
+table_names = []
+for item in result:
+    table_names.append(item[1])
 
 class LoginDatabase():
-    def __init__(self, dbname):
+    def __init__(self, dbname, num_of_table_in_names):
         self.dbname = DB_PATH
         self.conn = db.connect(dbname)
+        self.table_name = table_names[num_of_table_in_names]
 
     def tables_names(self):  # выводит наименование столбцов
-        query = "SELECT * FROM " + table_name + ";"
+        query = "SELECT * FROM " + self.table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.description
         return result
 
     def select_all_query(self):  # выводит всю бд
-        query = "SELECT * FROM " + table_name + ";"
+        query = "SELECT * FROM " + self.table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchall()
         return result
 
     def count_strings(self):  # выводит количество записей // строк
-        query = "SELECT COUNT(*) FROM " + table_name + ";"
+        query = "SELECT COUNT(*) FROM " + self.table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchone()
         return result[0]
 
     def show_date(self):  # выводит всю таблицу
-        query = "SELECT * FROM " + table_name + ";"
+        query = "SELECT * FROM " + self.table_name + ";"
         cursor = self.conn.execute(query)
         result = cursor.fetchall()
+        return result
+
+    def sort(self, column_name):  # сортировка
+        query = "SELECT * FROM " + self.table_name + " ORDER BY " + str(column_name)
+        cursor = self.conn.execute(query)
+        print(query, column_name)
+        result = cursor.fetchall()
+        self.conn.commit()
         return result
 
     def update_date(self, new_data):  # обновляет таблицу
@@ -43,7 +61,6 @@ class LoginDatabase():
         list_result_headers = result_headers[0:(len(result_headers) - 1)].split(" ")
         map_of_checked = dict()
         line_counter = 0
-
         for row_in_new in new_data:
             line_counter += 1
             count_in = 0  # счетчик совпадений в текущей бд
@@ -68,7 +85,7 @@ class LoginDatabase():
                             count += 1  # увеличиваем счетчик изменений
                             # формируем UPDATE запрос
                             header = str(list_result_headers[iterator])
-                            query = "UPDATE sessions SET " + header + " = ? WHERE " + table_name[0:-1] + "_id = " + \
+                            query = "UPDATE sessions SET " + header + " = ? WHERE " + self.table_name[0:-1] + "_id = " + \
                                     str(row_in_new[0]) + ";"
                             try:
                                 data = int(row_in_new[iterator])
@@ -83,7 +100,8 @@ class LoginDatabase():
                             except Exception as exc:
                                 error = str(exc)
                             if error is not None:
-                                if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
+                                if error == "UNIQUE constraint failed: " + self.table_name + self.table_name[0:-1] + \
+                                        "_id":
                                     print("insert_" + error)
                                 else:
                                     self.showMessageBox("Внимание!", "Произошла ошибка при обновлении: " + error,
@@ -93,17 +111,17 @@ class LoginDatabase():
 
                     if count != 0:  # если в строке есть изменение, то извещаем пользователя
                         self.showMessageBox("Обновление", "Изменения строки c полем '" +
-                                            table_name[0:-1] + "_id', которое равно " +
+                                            self.table_name[0:-1] + "_id', которое равно " +
                                             row_in_new[0] + " успешно внесены в базу данных", 'info')
                         map_of_checked[row_in_new[0]] = line_counter
                     elif count == 0:  # если изменений нет, то ничего не делаем
                         map_of_checked[row_in_new[0]] = line_counter
-                        print("Внимание! Запись с полем '" + table_name[0:-1] + "_id', которое равно "
+                        print("Внимание! Запись с полем '" + self.table_name[0:-1] + "_id', которое равно "
                               + row_in_new[0] + " уже существует и не нуждается в обновлении")
                         continue  # переходим к следущей строке new_data
 
             if count_in == 0:  # если совпадений нет, то данную строку надо добавить в бд
-                query = "INSERT INTO " + table_name + " VALUES("
+                query = "INSERT INTO " + self.table_name + " VALUES("
                 data = []
                 for item in row_in_new:
                     data.append(item)
@@ -118,14 +136,14 @@ class LoginDatabase():
                 except Exception as exc:
                     error = str(exc)
                 if error is not None:
-                    if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
+                    if error == "UNIQUE constraint failed: " + self.table_name + self.table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
                         self.showMessageBox("Внимание!", "Произошла ошибка при добавлении: " + error, 'error')
                 else:
                     map_of_checked[row_in_new[0]] = line_counter
                     self.showMessageBox("Обновление", "Строка c полем '" +
-                                        table_name[0:-1] + "_id', которое равно " +
+                                        self.table_name[0:-1] + "_id', которое равно " +
                                         row_in_new[0] + " успешно добавлена в базу данных", 'info')
 
         # теперь проверяем на удаление строк
@@ -137,22 +155,22 @@ class LoginDatabase():
             if count_out == 0:  # если счетчик не увеличился, значит совпадений нет
                 # Формируем запрос на удаление
                 data_id = str(row_in_cur[0])
-                query = "DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = :data_id;"
+                query = "DELETE FROM " + self.table_name + " WHERE " + self.table_name[0:-1] + "_id = :data_id;"
                 try:
-                    print("DELETE FROM " + table_name + " WHERE " + table_name[0:-1] + "_id = " + data_id)
+                    print("DELETE FROM " + self.table_name + " WHERE " + self.table_name[0:-1] + "_id = " + data_id)
                     self.conn.execute(query, {"data_id": data_id})
                     self.conn.commit()
                     error = None
                 except Exception as exc:
                     error = str(exc)
                 if error is not None:
-                    if error == "UNIQUE constraint failed: " + table_name + table_name[0:-1] + "_id":
+                    if error == "UNIQUE constraint failed: " + self.table_name + self.table_name[0:-1] + "_id":
                         print("count_in_" + error)
                     else:
                         self.showMessageBox("Внимание!", "Произошла ошибка при удалении: " + error, 'error')
                 else:
                     self.showMessageBox("Удаление", "Строка c полем '" +
-                                        table_name[0:-1] + "_id', которое равно " +
+                                        self.table_name[0:-1] + "_id', которое равно " +
                                         str(row_in_cur[0]) + " успешно удалена из базы данных", 'info')
 
     def showMessageBox(self, title, message, case):
@@ -182,25 +200,33 @@ class LoginDatabase():
 
 
 # Наследуемся от QMainWindow
-class SessionsWindow(QMainWindow):
+class TableWindow(QMainWindow):
     # Переопределяем конструктор класса
-    def __init__(self, additional_strings_count):
-        self.additional_strings_count = additional_strings_count  # количество строк добавленное во время одной сессии
+    def __init__(self, num_of_table_in_names):
+        self.num_of_table_in_names = num_of_table_in_names  # индекс таблицы в table_names
+        self.loginDatabase = LoginDatabase(DB_PATH, num_of_table_in_names)  # Соединяемся с бд
         # Обязательно нужно вызвать метод супер класса
         QMainWindow.__init__(self)
 
         self.setMinimumSize(QSize(880, 480))  # Устанавливаем размеры
-        self.setWindowTitle("Работа с таблицей " + table_name)  # Устанавливаем заголовок окна
+        self.setWindowTitle("Работа с таблицей " + table_names[self.num_of_table_in_names])  # Устанавл заголовок окна
         central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(central_widget)  # Устанавливаем центральный виджет
 
         grid_layout = QGridLayout()  # Создаём QGridLayout
         central_widget.setLayout(grid_layout)  # Устанавливаем данное размещение в центральный виджет
 
-        # Соединяемся с бд
-        self.loginDatabase = LoginDatabase(DB_PATH)
+        names_tables = self.loginDatabase.tables_names()
+        counter = 0
+        self.selected = QComboBox(self)
+        self.selected.insertItem(counter, "Сортировать по...")
+        for column_description in names_tables:
+            counter += 1
+            self.selected.insertItem(counter, column_description[0])
+        self.selected.activated[str].connect(self.sort_by)
+
         self.table = QTableWidget(self)  # Создаём таблицу
-        self.print_table(self.table)
+        self.print_table()
 
         add_button = QPushButton("Добавить пустую строку", self) # добавляет строку ниже
         add_button.clicked.connect(self.add_string)
@@ -208,16 +234,21 @@ class SessionsWindow(QMainWindow):
         update_button = QPushButton("Обновить базу данных", self)
         update_button.clicked.connect(self.update_data)
 
+        '''grid_layout.addWidget(self.table, 0, 0, 0, 0)  # Добавляем таблицу в сетку
+        grid_layout.addWidget(add_button, 1, 0, 1, 1)  # Добавляем кнопку в сетку
+        grid_layout.addWidget(update_button, 1, 1, 1, 1)'''
+
         grid_layout.addWidget(self.table, 0, 0)  # Добавляем таблицу в сетку
         grid_layout.addWidget(add_button, 1, 0)  # Добавляем кнопку в сетку
         grid_layout.addWidget(update_button, 2, 0)
+        grid_layout.addWidget(self.selected, 3, 0)
 
-    def print_table(self, table):
-        count_str = self.loginDatabase.count_strings() + self.additional_strings_count
+    def print_table(self):
+        count_str = self.loginDatabase.count_strings()
         names_tables = self.loginDatabase.tables_names()
-
-        table.setColumnCount(len(names_tables))  # Устанавливаем колонки
-        table.setRowCount(count_str)  # и строки в таблице
+        sort_mode = self.sort_by()
+        self.table.setColumnCount(len(names_tables))  # Устанавливаем колонки
+        self.table.setRowCount(count_str)  # и строки в таблице
 
         # Получаем список колон
         result_headers = ""
@@ -225,32 +256,30 @@ class SessionsWindow(QMainWindow):
             result_headers += column_description[0] + " "
         list_result_headers = result_headers[0:(len(result_headers) - 1)].split(" ")
         # Устанавливаем заголовки таблицы
-        table.setHorizontalHeaderLabels(list_result_headers)
+        self.table.setHorizontalHeaderLabels(list_result_headers)
 
         # попробовать закинуть в отдельный метод
-        select_result = self.loginDatabase.show_date()
+        select_result = ""
+        if sort_mode == "nothing":
+            print('without mode')
+            select_result = self.loginDatabase.show_date()
+        else:
+            print("With mode")
+            select_result = self.loginDatabase.sort(sort_mode)
+
+        print(select_result)
 
         # заполняем строки
         for counter, value in enumerate(select_result):
-            # print("value = " + str(value))
-            # print("counter = " + str(counter))
-            for j in range(len(value) + self.additional_strings_count):
-                # print("j = " + str(j))
-                if j >= len(value):
-                    data = ""
-                else:
-                    data = str(value[j])
-                table.setItem(counter, j, QTableWidgetItem(data))
+            for j in range(len(value)):
+                data = str(value[j])
+                self.table.setItem(counter, j, QTableWidgetItem(data))
 
     def add_string(self):
-        new_count = self.additional_strings_count + 1
-        if self.update_data() == 1:
-            # self.print_line()
-            return
-        else:
-            self.bdWindow = SessionsWindow(new_count)
-            self.bdWindow.show()
-            self.close()
+        print('adding empty line')
+        self.table.setRowCount(self.table.rowCount() + 1)
+        for i in range(self.table.columnCount()):
+            self.table.setItem(self.table.rowCount(), i, QTableWidgetItem(""))
 
     def update_data(self):  # обновление базы данных. Проверка на пустоту и запрос на обновление
         result_list = list("")
@@ -270,7 +299,8 @@ class SessionsWindow(QMainWindow):
             elif empty == 0:  # если вся строка фулл
                 pass
             else:  # если в строке есть пустое поле
-                self.showMessageBox("ОШИБКА", "Пустое поле в " + str(first_empty) + " столбце " + str(i+1) + " строки")
+                self.loginDatabase.showMessageBox("ОШИБКА", "Пустое поле в " + str(first_empty) + " столбце "
+                                                  + str(i+1) + " строки", 1)
                 return 1
             if result_text == '':
                 pass
@@ -280,23 +310,27 @@ class SessionsWindow(QMainWindow):
         self.additional_strings_count = 0
         print(result_list)
         self.loginDatabase.update_date(result_list)
-        self.bdWindow = SessionsWindow(0)
-        self.bdWindow.show()
-        self.close()
+        self.print_table()
 
-    def showMessageBox(self, title, message):
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec_()
+    def sort_by(self):
+        curr_txt = self.selected.currentText()
+        if self.selected.currentIndex() == 0:
+            print("Значение сортировки не выбрано")
+            return "nothing"
+        else:
+            return curr_txt
+
+    def closeEvent(self, e):
+        result = self.loginDatabase.showDilemaBox("Выход", "Вы уверены, что хотите выйти?")
+        if result == 1:
+            e.accept()
+        else:
+            e.ignore()
 
 
 if __name__ == "__main__":
     import sys
-
     app = QApplication(sys.argv)
-    mw = SessionsWindow(0)
+    mw = TableWindow(2)
     mw.show()
     sys.exit(app.exec())
