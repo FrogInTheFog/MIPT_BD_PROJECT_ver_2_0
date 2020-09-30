@@ -5,7 +5,7 @@ import sqlite3 as db
 import sys
 from PyQt5.Qt import *
 from PyQt5 import uic
-from welcome import DBFormWindow
+from table_window import DBFormWindow
 
 UI_Login_Form, Login_Form = uic.loadUiType("open.ui")
 
@@ -50,7 +50,9 @@ class LoginWindow(Login_Form):
             # cur.execute(query, [{"d": 'data'}, {"login": login}])
             self.conn.commit()  # сохраняем резальтат в базе
             result = cur.fetchone()
-            if result == "" or result[1] != password:
+            print(result)
+            print(password)
+            if result == "" or result[2] != password:
                 self.showMessageBox('Внимание!', 'Неправильное имя пользователя или пароль.')
                 return
             error = None
@@ -64,7 +66,7 @@ class LoginWindow(Login_Form):
             print(error)
             #self.ui.error_label.setText(error)
         else:
-            self.DBFormWindowShow()
+            self.DBFormWindowShow(str(result[0]))
             self.close()
 
     def showMessageBox(self, title, message):
@@ -75,8 +77,8 @@ class LoginWindow(Login_Form):
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.exec_()
 
-    def DBFormWindowShow(self):
-        self.bdWindow = DBFormWindow()
+    def DBFormWindowShow(self, user_name):
+        self.bdWindow = DBFormWindow(user_name)
         self.bdWindow.show()
 
     def keyPressEvent(self, event):
